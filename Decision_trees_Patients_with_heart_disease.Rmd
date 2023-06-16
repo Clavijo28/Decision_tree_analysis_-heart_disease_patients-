@@ -1,0 +1,407 @@
+---
+title: "Assignment_2_Predictive_Analisis"
+output:
+  pdf_document: default
+  html_document: default
+date: '2022-05-04'
+---
+
+```{r setup, include=FALSE}
+
+library(readxl)
+library(tidyverse)
+library(skimr)
+library(DataExplorer)
+library(ggpubr)
+library(univariateML)
+library(GGally)
+library(mosaicData)
+library(viridis)
+library(hrbrthemes)
+#install.packages("installr")
+#library(installr)
+#updateR()
+library(plyr)
+
+setwd("C:/Users/Christian/Desktop/Master of Data Science/Second Semester/Predictive Analisys/Assignment_2")
+getwd()
+
+heart_sample <- read.csv("Subdata.set.heart.csv")
+
+heart_sample$cp <- as.factor(heart_sample$cp)
+heart_sample$exang <- as.factor(heart_sample$exang)
+heart_sample$restwm <- as.factor(heart_sample$restwm)
+
+plot_bar(
+  heart_sample,
+  ncol    = 2,
+  title   = "Number of Observations per Group of clases selected",
+  ggtheme = theme_bw(),
+  theme_config = list(
+                   plot.title = element_text(size = 16, face = "bold"),
+                   strip.text = element_text(colour = "black", size = 10, face = 2),
+                   legend.position = "none"
+                  ))
+
+```
+
+```{r}
+
+restwm_data <- heart_sample %>%
+  select(restwm, thalach)
+
+mean_restwm <- ddply(restwm_data, "restwm", summarise, gpr.mean = mean(thalach))
+
+cp_data <- heart_sample %>%
+  select(cp, thalach)
+
+mean_cp <- ddply(cp_data, "cp", summarise, gpr.mean = mean(thalach))
+
+exang_data <- heart_sample %>%
+  select(exang, thalach)
+
+mean_exang <- ddply(exang_data, "exang", summarise, gpr.mean = mean(thalach))
+
+par(mfrow=c(3,3))
+
+ggplot(restwm_data, aes(x=thalach, color=restwm, fill= restwm))+
+  geom_histogram(position="identity", alpha=0.6)+
+  geom_density(alpha=0.8)+
+  facet_grid(restwm ~ .)+
+  geom_vline(data=mean_restwm, aes(xintercept=gpr.mean), linetype="dashed", color="blue")+
+  xlab("Frequency of the relationship of Thalach values") +
+  ylab("Value of Thalach") +
+  labs(title = "Relation between Value of Thalach and restwm")
+
+ggplot(cp_data, aes(x=thalach, color=cp, fill= cp))+
+  geom_histogram(position="identity", alpha=0.6)+
+  geom_density(alpha=0.8)+
+  facet_grid(cp ~ .)+
+  geom_vline(data=mean_cp, aes(xintercept=gpr.mean), linetype="dashed", color="blue")+
+  xlab("Frequency of the relationship of Thalach values") +
+  ylab("Value of Thalach") +
+  labs(title = "Relation between Value of Thalach and Cp")
+
+ggplot(exang_data, aes(x=thalach, color=exang, fill= exang))+
+  geom_histogram(position="identity", alpha=0.6)+
+  geom_density(alpha=0.8)+
+  facet_grid(exang ~ .)+
+  geom_vline(data=mean_exang, aes(xintercept=gpr.mean), linetype="dashed", color="blue")+
+  xlab("Frequency of the relationship of Thalach values") +
+  ylab("Value of Thalach") +
+  labs(title = "Relation between Value of Thalach and exang")
+
+```
+```{r}
+
+par(mfrow=c(3,3))
+
+ggplot(heart_sample, aes(x = cp, y = major_vessels, fill=cp)) +
+  geom_boxplot() +
+  xlab("Cp Category") +
+  ylab("Value of Major vessels") +
+  labs(title = "Relation between Value of Major vessels and Cp")
+
+ggplot(heart_sample, aes(x = restwm, y = major_vessels, fill = restwm)) +
+  geom_boxplot() +
+  xlab("restwm Category") +
+  ylab("Value of Major vessels") +
+  labs(title = "Relation between Value of Major vessels and restwm")
+
+ggplot(heart_sample, aes(x = exang, y = major_vessels, fill = exang)) +
+  geom_boxplot() +
+  xlab("exang Category") +
+  ylab("Value of Major vessels") +
+  labs(title = "Relation between Value of Major vessels and exang")
+
+```
+```{r}
+
+par(mfrow=c(3,3))
+
+ggplot(heart_sample, aes(x = cp, y = oldpeak, fill=cp)) +
+  geom_boxplot() +
+  xlab("cp Category") +
+  ylab("Value of oldpeak") +
+  labs(title = "Relation between Value of oldpeak and cp")
+
+ggplot(heart_sample, aes(x = restwm, y = oldpeak, fill = restwm)) +
+  geom_boxplot() +
+  xlab("restwm Category") +
+  ylab("Value of oldpeak") +
+  labs(title = "Relation between Value of oldpeak and restwm")
+
+ggplot(heart_sample, aes(x = exang, y = oldpeak, fill = exang)) +
+  geom_boxplot() +
+  xlab("exang Category") +
+  ylab("Value of oldpeak") +
+  labs(title = "Relation between Value of oldpeak and exang")
+
+```
+```{r}
+
+df <- heart_sample %>%
+  select(cp, exang, major_vessels, oldpeak, restwm, thalach, target)
+
+ggpairs(df, mapping = ggplot2::aes(colour=target)) +
+  theme_bw()
+
+df2 <- df %>%
+  select(major_vessels,oldpeak,thalach, target)
+
+ggpairs(df2, mapping = ggplot2::aes(colour=target)) +
+  theme_bw()
+
+```
+```{r}
+
+library(rpart.plot)
+
+library(rgl)
+library(mice)
+library(dplyr)
+library(GGally)
+library(tidyverse)
+
+library(viridis)
+library(hrbrthemes)
+library(ggplot2)
+library(heplots)
+library(caret)
+
+#install.packages('caret', dependencies=T)
+#library(caret)
+
+library(ROCR)
+library(pROC)
+
+heart_sample$cp <- as.factor(heart_sample$cp)
+heart_sample$exang <- as.factor(heart_sample$cp)
+heart_sample$major_vessels <- as.numeric(heart_sample$major_vessels)
+heart_sample$oldpeak <- as.numeric(heart_sample$oldpeak)
+heart_sample$restwm <- as.factor(heart_sample$restwm)
+heart_sample$thalach <- as.numeric(heart_sample$thalach)
+heart_sample$target <- as.factor(heart_sample$target)
+
+head(heart_sample)
+
+```
+```{r}
+
+# First decision tree
+train_index_heart_1 <- sample(1:nrow(heart_sample), 0.8 * nrow(heart_sample))
+test_index_1 <- setdiff(1:nrow(heart_sample), train_index_heart_1)
+
+train_1 <- heart_sample[train_index_heart_1,]
+test_1 <- heart_sample[test_index_1,]
+list(train_1 = summary(train_1), test_1 = summary(test_1))
+
+c.tree_1 <- rpart(target ~ ., train_1, method = "class", cp=0)
+
+rpart.plot(c.tree_1, box.palette="RdBu", shadow.col="gray", nn=TRUE)
+
+## Prediction and evaluation model (first decision tree)
+prediccion_1 <- predict(c.tree_1, test_1, type = "class")
+diseasse.predicted.data_1 <- cbind(test_1, prediccion_1)
+head(diseasse.predicted.data_1)
+confusionMatrix(prediccion_1, test_1[["target"]])
+mean(prediccion_1 == test_1$target)
+
+## ROC curve
+prob_1 = predict(c.tree_1, newdata = test_1, type = "prob")[,2]
+res.roc_1 <- roc(test_1$target, prob_1)
+plot.roc(res.roc_1, print.auc = TRUE, print.thres = "best")
+
+# Set up caret to perform 10-fold cross validation
+cv.control_1 <- trainControl(method = "cv", number = 10)
+
+rpart.cv_1 <- train(target ~ ., data = train_1, method = "rpart", trControl = cv.control_1, tuneLength = 15)
+rpart.cv_1
+
+plot(rpart.cv_1)
+
+```
+```{r}
+
+# Second decision tree
+train_index_heart_2 <- sample(1:nrow(heart_sample), 0.7 * nrow(heart_sample))
+test_index_2 <- setdiff(1:nrow(heart_sample), train_index_heart_2)
+
+train_2 <- heart_sample[train_index_heart_2,]
+test_2 <- heart_sample[test_index_2,]
+
+list(train_2 = summary(train_2), test_2 = summary(test_2))
+#maxdepth = 5, minsplit = 10, minbucket = 30, parms = list(split = "gini")minsplit = 20, minbucket = round(20/3)
+d <- 25
+c.tree_2 <- rpart(target ~ ., train_2, method = "class", cp = 0.004983389, minbucket = round(d/3),minsplit = d)
+rpart.plot(c.tree_2, box.palette="RdBu", shadow.col="gray", nn=TRUE)
+
+## Prediction and evaluation model (first decision tree)
+prediccion_2 <- predict(c.tree_2, test_2, type = "class")
+diseasse.predicted.data_2 <- cbind(test_2, prediccion_2)
+head(diseasse.predicted.data_2)
+confusionMatrix(prediccion_2, test_2[["target"]])
+mean(prediccion_2 == test_2$target)
+
+## ROC curve
+prob_2 = predict(c.tree_2, newdata = test_2, type = "prob")[,2]
+res.roc_2 <- roc(test_2$target, prob_2)
+plot.roc(res.roc_2, print.auc = TRUE, print.thres = "best")
+
+# Set up caret to perform 10-fold cross validation
+cv.control_2 <- trainControl(method = "cv", number = 10)
+
+rpart.cv_2 <- train(target ~ ., data = train_2, method = "rpart", trControl = cv.control_2, tuneLength = 15)
+rpart.cv_2
+
+plot(rpart.cv_2)
+
+```
+```{r}
+# Third decision tree
+train_index_heart_3 <- sample(1:nrow(heart_sample), 0.7 * nrow(heart_sample))
+test_index_3 <- setdiff(1:nrow(heart_sample), train_index_heart_3)
+#install.packages("Rcpp")
+#library(Rcpp)
+
+train_3 <- heart_sample[train_index_heart_3,]
+test_3 <- heart_sample[test_index_3,]
+
+list(train_3 = summary(train_3), test_3 = summary(test_3))
+#maxdepth = 5, minsplit = 10, minbucket = 30, parms = list(split = "gini")
+c.tree_3 <- rpart(target ~ ., train_3, method = "class", maxdepth = 7, cp=0.004983389, minsplit=6)
+rpart.plot(c.tree_3, box.palette="RdBu", shadow.col="gray", nn=TRUE)
+
+## Prediction and evaluation model (Third decision tree)
+prediccion_3 <- predict(c.tree_3, test_3, type = "class")
+diseasse.predicted.data_3 <- cbind(test_3, prediccion_3)
+head(diseasse.predicted.data_3)
+confusionMatrix(prediccion_3, test_3[["target"]])
+mean(prediccion_3 == test_3$target)
+
+## ROC curve
+prob_3 = predict(c.tree_3, newdata = test_3, type = "prob")[,2]
+res.roc_3 <- roc(test_3$target, prob_3)
+plot.roc(res.roc_3, print.auc = TRUE, print.thres = "best")
+
+# Set up caret to perform 10-fold cross validation
+cv.control_3 <- trainControl(method = "cv", number = 10)
+
+rpart.cv_3 <- train(target ~ ., data = train_3, method = "rpart", trControl = cv.control_3, tuneLength = 15)
+rpart.cv_3
+
+plot(rpart.cv_3)
+
+```
+```{r}
+
+# Best descicion tree
+
+train_index_heart_cp <- sample(1:nrow(heart_sample), 0.8 * nrow(heart_sample))
+test_index_cp <- setdiff(1:nrow(heart_sample), train_index_heart_cp)
+
+train_cp <- heart_sample[train_index_heart_cp,]
+test_cp <- heart_sample[test_index_cp,]
+
+list(train_cp = summary(train_cp), test_cp = summary(test_cp))
+
+# Fit the fully grown tree
+c.tree.full <- rpart(target ~ ., train_cp, method = "class", cp=0)
+rpart.plot(c.tree.full, box.palette="RdBu", shadow.col="gray", nn=TRUE)
+
+# Select the best complexity parameter
+min.cp <- c.tree.full$cptable[which.min(c.tree.full$cptable[,"xerror"]),"CP"]
+
+# print the best cp
+min.cp
+
+# Prune the tree fully grown tree
+p.tree.full<- prune(c.tree.full, cp=c.tree.full$cptable[which.min(c.tree.full$cptable[,"xerror"]),"CP"])
+rpart.plot(p.tree.full, box.palette="RdBu", shadow.col="gray", nn=TRUE)
+
+# Make a prediction
+diseasse.predict <- predict(p.tree.full, test_cp, type = "class")
+diseasse.predicted.data <- cbind(test_cp, diseasse.predict)
+head(diseasse.predicted.data)
+confusionMatrix(diseasse.predict, test_cp[["target"]])
+mean(diseasse.predict == test_cp$target)
+
+## ROC curve
+prob_b = predict(p.tree.full, newdata = test_1, type = "prob")[,2]
+res.roc_b <- roc(test_1$target, prob_b)
+plot.roc(res.roc_b, print.auc = TRUE, print.thres = "best")
+
+# Set up caret to perform 10-fold cross validation
+cv.control_b <- trainControl(method = "cv", number = 10)
+
+rpart.cv_b <- train(target ~ ., data = train_1, method = "rpart", trControl = cv.control_b, tuneLength = 15)
+rpart.cv_b
+
+plot(rpart.cv_b)
+
+```
+```{r}
+
+# Evaluacion de indicadores
+
+comparison <- data.frame("Decision Tree" =c(1,2,3),"Accuracy"=c(0.8598, 0.8776,0.9102),
+                         "Sensitivity"=c(0.775,0.831,0.851),"Specificity"=c(0.940,0.929,0.446),
+                         "AUC"=c(0.872,0.9116,0.914),
+                         "Hyperparameters Ajusted"= 
+                           c("cp = 0.003","cp = 0.003, minsplit = 25, minbucket = 8",
+                             "cp = 0.003, minsplit = 6, maxdepth=7"))
+
+# random forest para evalaucion de predictores
+
+library(randomForest)
+#install.packages("doParallel")
+set.seed(356)
+
+modelo_bagging <- randomForest(target ~ ., data = train_3, 
+                               mtry = 6, 
+                               importance = TRUE, #evaluar importancia predictores
+                               ntree = 500)
+
+modelo_bagging
+
+plot(modelo_bagging, col = "firebrick")
+importance(modelo_bagging)
+varImpPlot(modelo_bagging)
+
+# random forest
+
+library(caret)
+library(parallel)
+library(doParallel)
+cluster <- makeCluster(detectCores() - 1)
+registerDoParallel(cluster) # procesamiento paralelo
+
+# Método de validación cruzada (10-fold)
+fitControl <- trainControl(method = "cv", 
+                           number = 10, 
+                           search = "grid",
+                           allowParallel = TRUE)
+
+# Hiperparámetro a optimizar: número de predictores aleatorios en cada ramificación.
+grid_mtry <- expand.grid(mtry = c(2:5))
+
+# Ajuste del modelo random forest
+set.seed(356)
+modelo_rf <- train(target ~ ., data = train_3, 
+                   method = "rf",
+                   metric = "Accuracy",
+                   ntree = 500,
+                   tuneGrid = grid_mtry, 
+                   trControl = fitControl)
+
+modelo_rf
+plot(modelo_rf)
+
+# Top 10 variables mas importantes en el modelo
+plot(varImp(modelo_rf, scale = FALSE), top = 8)
+
+#https://rpubs.com/Cristina_Gil/arboles_ensemble
+
+```
+
+
